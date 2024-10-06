@@ -1,5 +1,5 @@
-import { SpotContainer } from '../components/SpotContainer';
-import { SpotInfoContainer } from '../components/SpotInfoContainer';
+import { SpotContainer } from '../components/SpotContainer'
+import { SpotInfoContainer } from '../components/SpotInfoContainer'
 import { MapContainer, TileLayer, Marker, useMap, Popup } from 'react-leaflet'
 import '../assets/Home.css'
 import 'leaflet/dist/leaflet.css'
@@ -14,18 +14,18 @@ import { Slide } from 'react-slideshow-image'
 import 'react-slideshow-image/dist/styles.css'
 
 export default function Home() {
-  const spots = [];
-  const [position, setPosition] = useState({latitude: 43.747474670410156, longitude: -79.49417877197266});
-  const [spotID, setSpotID] = useState(0);
-  const [isSpotClicked, setIsSpotClicked] = useState(false);
-  const [markersData, setMarkersData] = useState();
+  const [spots, setSpots] = useState([])
+  const [position, setPosition] = useState({latitude: 43.747474670410156, longitude: -79.49417877197266})
+  const [spotID, setSpotID] = useState(0)
+  const [isSpotClicked, setIsSpotClicked] = useState(false)
+  const [markersData, setMarkersData] = useState()
   // const [authUser, setAuthUser] = useState(null);
-  const imageListRef = ref(imgDB, 'images/');
-  const databaseRef = dbRef(rtDB, 'spots/');
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isMobileWidth, setIsMobileWidth] = useState(false);
-  const [searchInput, setSearchInput] = useState("");
-  const [filteredData, setFilteredData] = useState();
+  const imageListRef = ref(imgDB, 'images/')
+  const databaseRef = dbRef(rtDB, 'spots/')
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isMobileWidth, setIsMobileWidth] = useState(false)
+  const [searchInput, setSearchInput] = useState("")
+  const [filteredData, setFilteredData] = useState()
 
   let autoResize = () => {
     if (window.innerWidth < 700 ){
@@ -46,14 +46,23 @@ export default function Home() {
   }
 
   useEffect(() => {
-    
     onValue(databaseRef, (snapshot) => {
-      snapshot.forEach(childSnapShot => {
-        spots.push(childSnapShot.val())
-      })
-      setMarkersData(spots)
-      setFilteredData(spots)
+      if (snapshot.size != spots.length) {
+        const newSpots = []
+        snapshot.forEach(childSnapShot => {
+          newSpots.push(childSnapShot.val())
+        })
+        setMarkersData(newSpots)
+        setFilteredData(newSpots)
+        setSpots(newSpots)
+      }
     })
+
+    const successCallback = (position) => {
+      setPosition({latitude: position.coords.latitude, longitude: position.coords.longitude});
+    }
+    
+    navigator.geolocation.getCurrentPosition(successCallback);
   }, [])
 
   function getSpotContent(obj) {
@@ -100,7 +109,7 @@ export default function Home() {
     height: "3vw",
     background: 'none',
     border: '0px',
-};
+}
 
 const properties = {
     canSwipe: true,
@@ -149,7 +158,7 @@ const properties = {
       { isSpotClicked ? (
         <div className = "spotWindow">
           {markersData ? (
-                <SpotInfoContainer properties={properties} spotID={spotID} markersData={markersData} spotClick={spotClick} showMap={showMap} filteredData={filteredData}/>
+                <SpotInfoContainer properties={properties} spotID={spotID} markersData={markersData} spotClick={spotClick} showMap={showMap} filteredData={filteredData} position={position}/>
           ) : (
             <></>
           )}
