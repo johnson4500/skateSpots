@@ -1,9 +1,9 @@
 import { React, useMemo, useState, useEffect} from "react";
 import { Slide } from "react-slideshow-image";
-import {update, ref as dbRef, onValue} from 'firebase/database';
-import { rtDB} from '../firebaseconfig';
+import { getDatabase, get, child, update, ref as dbRef, onValue, remove} from 'firebase/database';
+import { auth, rtDB} from '../firebaseconfig';
 import { v4 } from "uuid";
-import { useAuth } from "../pages/AuthContext";
+import { useAuth } from "../AuthContext";
 
 export function SpotInfoContainer({
   properties,
@@ -11,13 +11,13 @@ export function SpotInfoContainer({
   filteredData,
   spotClick,
   showMap,
+  position
 }) {
 
   const { authUser, setAuthUser } = useAuth();
   const [text, setText] = useState("");
   const [commentsData, setCommentsData] = useState({});
   const commentRef = useMemo(() => dbRef(rtDB, 'spots/' + filteredData[spotID].spotName + '/comments'), [filteredData, spotID]);
-
 
   const handleChange = (e) => {
     const textarea = e.target;
@@ -38,7 +38,14 @@ export function SpotInfoContainer({
       const formattedDateTime = `${year}-${month < 10 ? '0' : ''}${month}-${day < 10 ? '0' : ''}${day} ${hours < 10 ? '0' : ''}${hours}:${minutes < 10 ? '0' : ''}${minutes}`;
       if (text.length > 1) {
         update(commentRef, {
-          [v4()]: text + formattedDateTime,
+          [commentsData.length + 1]: {
+            content: text,
+            date: formattedDateTime,
+            likes: {
+              [0]: ""
+            },
+            author: authUser.displayName
+          },
         }).then(() => {
           setText("");
           console.log("Comment added.");
@@ -47,10 +54,28 @@ export function SpotInfoContainer({
     } else {
       window.alert("Please sign in to comment!");
     }
-    
+  }
+
+  const sendLike = (e) => {
+    if (authUser !== null && authUser.emailVerified) {
+      get(child(dbRef(rtDB, 'spots/' + filteredData[spotID].spotName + '/comments' + '/' + e.target.id + '/likes'), authUser.displayName))
+      .then((snapshot) => { 
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          remove(dbRef(rtDB, 'spots/' + filteredData[spotID].spotName + '/comments' + '/' + e.target.id + '/likes' + '/' + authUser.displayName));
+        } else {
+          update(dbRef(rtDB, 'spots/' + filteredData[spotID].spotName + '/comments' + '/' + e.target.id + "/likes"), {
+            [authUser.displayName]: authUser.displayName
+          });
+        }
+      });
+    } else {
+      window.alert("Please log in and verify your account to like and comment!");
+    }
   }
   
   useEffect(() => {
+    console.log(authUser)
     const unsubscribe = onValue(commentRef, (snapshot) => {
       const newComments = [];
       snapshot.forEach(childSnapshot => {
@@ -59,8 +84,8 @@ export function SpotInfoContainer({
 
       // Sort comments by date posted (oldest to newest)
       const sortedComments = newComments.slice().sort((a, b) => {
-        const timestampA = a.slice(a.length - 16, a.length); // Extract timestamp substring
-        const timestampB = b.slice(b.length - 16, b.length);
+        const timestampA = a.content.slice(a.content.length - 16, a.content.length); // Extract timestamp substring
+        const timestampB = b.content.slice(b.content.length - 16, b.content.length);
       
         const timeA = new Date(timestampA);
         const timeB = new Date(timestampB);
@@ -91,7 +116,7 @@ export function SpotInfoContainer({
       <div style = {{marginTop: "10px"}}>
         <strong id="spotTitleText">Spot Name: {filteredData[spotID].spotName}</strong>
       </div>
-      <p id="spotAddress">Address: {filteredData[spotID].spotAddress}</p>
+      <a href = {`https://www.google.com/maps/search/?api=1&query=${position.latitude}%2C${position.longitude}`} target="_blank" style = {{textDecoration: "none"}} id="spotAddress">Address: {filteredData[spotID].spotAddress}</a>
       <div className="spotDescription">
         <p id="spotDescriptionText">{filteredData[spotID].spotDescription}</p>
       </div>
@@ -143,12 +168,30 @@ export function SpotInfoContainer({
   
       <div className = "commentsContainer">
         {commentsData.length > 0 ? (
-          commentsData.map(element => (
+          commentsData.map((element, i) => (
           <div className="comments">
             <div style = {{height: "30px"}}>
-            <p style = {{marginBottom: "0"}}>{element.substring(element.length - 16, element.length)}</p>
+            <p style = {{marginBottom: "0"}}>{element.date}</p>
             </div>
-             <strong>{element.substring(0, element.length - 16)}</strong>
+            <div style = {{marginBottom: "5px"}}>
+             <strong>{element.content}</strong>
+            </div>
+             <div style = {{ marginBottom: "15px",}}>
+              <p style = {{float: "left"}}>Posted by: {element.author}</p>
+              <p style = {{float: "right", marginLeft: "5px"}}>{Object.keys(element.likes).length - 1}</p>
+              <img
+                id = {i + 1}
+                src = "https://cdn-icons-png.flaticon.com/512/81/81250.png" 
+                style = {{
+                  width: "20px", 
+                  height: "20px", 
+                  float: "right"
+                }}
+                role="button"
+                tabIndex="0"
+                onClick={sendLike}
+              ></img>
+            </div>
           </div>
           ))
         ) : (
