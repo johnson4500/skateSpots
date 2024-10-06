@@ -3,7 +3,7 @@ import {useState, useEffect} from 'react'
 import {useNavigate} from 'react-router-dom'
 import { auth } from '../firebaseconfig'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { useAuth } from '../pages/AuthContext'
+import { useAuth } from '../AuthContext'
 
 export default function NavBar() {
   const navigate = useNavigate()
@@ -21,7 +21,7 @@ export default function NavBar() {
     return () => {
         listen()
     }
-  }, [authUser])
+  }, [onAuthStateChanged])
 
   const userSignOut = () => {
     signOut(auth).then(() => {
@@ -34,7 +34,7 @@ export default function NavBar() {
     <nav className = 'nav'>
         <div>
         <a href = '/spot-seeker/' className = 'titleSite'>Spot Seeker</a>
-        <img className = "board" src = "https://firebasestorage.googleapis.com/v0/b/skatespots-56bd6.appspot.com/o/images%2Foutput-onlinepngtools.png?alt=media&token=e3691113-45bb-43f7-969b-f8acab958cc2"></img>
+        <img className = "board" src = "https://firebasestorage.googleapis.com/v0/b/skatespots-56bd6.appspot.com/o/images%2Foutput-onlinepngtools%20(1).png?alt=media&token=1b72e8c7-5d2b-481d-8c07-6b81b1156217"></img>
       </div>
       <ul>
         <li>
